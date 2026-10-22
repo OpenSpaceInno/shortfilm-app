@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ----------------------------------------------------------------------------
   # 1. MySQL 8.0 Database
@@ -9,20 +7,21 @@ services:
     container_name: shortreel-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: shortreel_dev
-      MYSQL_USER: shortreel_user
-      MYSQL_PASSWORD: shortreel_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-shortreel_prod}
+      MYSQL_USER: ${MYSQL_USER:-shortreel_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-shortreel_password}
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER:-shortreel_user}", "-p${MYSQL_PASSWORD:-shortreel_password}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
     networks:
       - shortreel-network
 
@@ -34,7 +33,7 @@ services:
     container_name: shortreel-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -60,17 +59,23 @@ services:
       NODE_ENV: production
       DATABASE_HOST: shortreel-mysql
       DATABASE_PORT: 3306
-      DATABASE_USER: shortreel_user
-      DATABASE_PASSWORD: shortreel_password
-      DATABASE_NAME: shortreel_dev
+      DATABASE_USER: ${MYSQL_USER:-shortreel_user}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD:-shortreel_password}
+      DATABASE_NAME: ${MYSQL_DATABASE:-shortreel_prod}
       REDIS_HOST: shortreel-redis
       REDIS_PORT: 6379
-      JWT_SECRET: super-secret-shortreel-dev-key-minimum-32-chars-long
-      AUTH0_DOMAIN: shortreel-dev.us.auth0.com
-      AUTH0_AUDIENCE: https://api.shortreel.io
-      CORS_ORIGIN: "http://localhost:8080,http://localhost:5173,http://localhost:3000,http://localhost"
+      JWT_SECRET: ${JWT_SECRET:-super-secret-shortreel-key-minimum-32-chars-long}
+      AUTO_SEED: ${AUTO_SEED:-true}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN:-shortreel-dev.us.auth0.com}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-https://api.shortreel.io}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      CLOUDFLARE_STREAM_ACCOUNT_ID: ${CLOUDFLARE_STREAM_ACCOUNT_ID:-}
+      CLOUDFLARE_STREAM_API_TOKEN: ${CLOUDFLARE_STREAM_API_TOKEN:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     depends_on:
       shortreel-mysql:
         condition: service_healthy
@@ -81,21 +86,27 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 25s
     networks:
       - shortreel-network
 
   # ----------------------------------------------------------------------------
-  # 4. ShortReel TanStack Router / Vite Frontend SPA
+  # 4. ShortReel TanStack Router / Vite Frontend SPA + Nginx
   # ----------------------------------------------------------------------------
   shortreel-frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_APP_TITLE: ${VITE_APP_TITLE:-ShortReel}
+        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN:-}
+        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID:-}
+        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE:-}
     container_name: shortreel-frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-80}:80"
     depends_on:
       shortreel-backend:
         condition: service_healthy
@@ -104,6 +115,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
+      start_period: 10s
     networks:
       - shortreel-network
 

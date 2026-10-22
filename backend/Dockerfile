@@ -39,7 +39,12 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/database/migrations ./dist/src/database/migrations
 COPY --from=builder /app/drizzle.config.js ./drizzle.config.js 2>/dev/null || true
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Ensure execution permissions for entrypoint and set ownership to node
+RUN chmod +x ./docker-entrypoint.sh && chown -R node:node /app
 
 # Run as non-root user for container security
 USER node
@@ -49,4 +54,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -f http://localhost:3000/api/v1/health/live || exit 1
 
-CMD ["node", "dist/src/main.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

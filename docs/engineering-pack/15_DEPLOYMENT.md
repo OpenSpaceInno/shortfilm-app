@@ -1,4 +1,4 @@
-﻿# 15. SHORTREEL — DEPLOYMENT
+# 15. SHORTREEL — DEPLOYMENT
 
 > **Reference:** `docs/architecture/25_DEPLOYMENT_ARCHITECTURE.md`
 
@@ -39,3 +39,13 @@ EXPOSE 3000, CMD ["node", "dist/main.js"]
 
 - GET /health/liveness → 200 if process responds (event loop alive)
 - GET /health/readiness → 200 if MySQL + Redis reachable; 503 if either is down
+
+## Coolify / Hostinger VPS Deployment
+
+For self-hosted deployment on a Hostinger VPS via Coolify:
+- **Reference**: `COOLIFY_HOSTINGER_DEPLOYMENT.md`
+- **Deployment Strategy**: Docker Compose (frontend + backend + MySQL + Redis)
+- **Auto-SSL**: Traefik Let's Encrypt managed by Coolify
+- **Migrations**: Executed automatically on container boot via `backend/docker-entrypoint.sh`
+- **Seeding**: Canonical roles, content, and subscription plans seeded via `AUTO_SEED=true`
+
