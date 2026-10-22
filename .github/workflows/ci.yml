@@ -1,0 +1,125 @@
+name: ShortReel CI — Pull Request & Trunk Validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. Frontend Lint, Typecheck & Production Build
+  # ============================================================================
+  frontend-validation:
+    name: Frontend Typecheck & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript strict compilation check
+        run: npx tsc --noEmit
+
+      - name: Build production bundle (Vite + SSR)
+        run: npm run build
+
+  # ============================================================================
+  # 2. Backend Unit & Integration Tests (with MySQL 8.0 & Redis 7.0 services)
+  # ============================================================================
+  backend-test-suite:
+    name: Backend Test Suite (33 Modules)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: shortreel_test
+          MYSQL_USER: shortreel_user
+          MYSQL_PASSWORD: shortreel_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost -u root -prootpassword" --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis:7.0-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Compile backend TypeScript
+        run: npm run build
+
+      - name: Run Jest test suite across all modules
+        env:
+          NODE_ENV: test
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 3306
+          DATABASE_USER: shortreel_user
+          DATABASE_PASSWORD: shortreel_password
+          DATABASE_NAME: shortreel_test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: super-secret-shortreel-ci-test-key-32-chars-long
+        run: npm test -- --ci --maxWorkers=2
+
+  # ============================================================================
+  # 3. Docker Multi-Stage Build Validation
+  # ============================================================================
+  docker-build-verification:
+    name: Docker Container Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: shortreel-backend:ci
+
+      - name: Build Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: shortreel-frontend:ci

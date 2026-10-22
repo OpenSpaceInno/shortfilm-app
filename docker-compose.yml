@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. MySQL 8.0 Database
+  # ----------------------------------------------------------------------------
+  shortreel-mysql:
+    image: mysql:8.0
+    container_name: shortreel-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: shortreel_dev
+      MYSQL_USER: shortreel_user
+      MYSQL_PASSWORD: shortreel_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shortreel-network
+
+  # ----------------------------------------------------------------------------
+  # 2. Redis 7.0 In-Memory Cache & Streams
+  # ----------------------------------------------------------------------------
+  shortreel-redis:
+    image: redis:7.0-alpine
+    container_name: shortreel-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shortreel-network
+
+  # ----------------------------------------------------------------------------
+  # 3. ShortReel NestJS Modular Monolith Backend
+  # ----------------------------------------------------------------------------
+  shortreel-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shortreel-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_HOST: shortreel-mysql
+      DATABASE_PORT: 3306
+      DATABASE_USER: shortreel_user
+      DATABASE_PASSWORD: shortreel_password
+      DATABASE_NAME: shortreel_dev
+      REDIS_HOST: shortreel-redis
+      REDIS_PORT: 6379
+      JWT_SECRET: super-secret-shortreel-dev-key-minimum-32-chars-long
+      AUTH0_DOMAIN: shortreel-dev.us.auth0.com
+      AUTH0_AUDIENCE: https://api.shortreel.io
+      CORS_ORIGIN: "http://localhost:8080,http://localhost:5173,http://localhost:3000,http://localhost"
+    ports:
+      - "3000:3000"
+    depends_on:
+      shortreel-mysql:
+        condition: service_healthy
+      shortreel-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - shortreel-network
+
+  # ----------------------------------------------------------------------------
+  # 4. ShortReel TanStack Router / Vite Frontend SPA
+  # ----------------------------------------------------------------------------
+  shortreel-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shortreel-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      shortreel-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - shortreel-network
+
+networks:
+  shortreel-network:
+    name: shortreel-network
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local

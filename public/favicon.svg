@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="appBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="appGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="50%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+    <linearGradient id="playGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#e11d48" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Base Rounded Container -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#appBg)" stroke="url(#appGlow)" stroke-width="2.5"/>
+
+  <!-- Vertical Cinema Film Frame (9:16 portrait OTT motif) -->
+  <rect x="15" y="10" width="34" height="44" rx="7" fill="#1c1917" stroke="#e11d48" stroke-width="1.8" opacity="0.95"/>
+
+  <!-- Left Film Perforations -->
+  <rect x="17.5" y="14" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="17.5" y="22" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="17.5" y="30" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="17.5" y="38" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="17.5" y="46" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+
+  <!-- Right Film Perforations -->
+  <rect x="43" y="14" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="43" y="22" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="43" y="30" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="43" y="38" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+  <rect x="43" y="46" width="3.5" height="4.5" rx="1.2" fill="#e11d48" opacity="0.9"/>
+
+  <!-- Center Luminous Play Glyph -->
+  <polygon points="29,24 41,32 29,40" fill="url(#playGlow)" filter="url(#shadow)"/>
+</svg>

@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS `creator_earnings` (
+  `id` BINARY(16) NOT NULL,
+  `creator_id` BINARY(16) NOT NULL,
+  `period_month` DATE NOT NULL,
+  `gross_amount` DECIMAL(12,2) NOT NULL DEFAULT '0.00',
+  `platform_fee` DECIMAL(12,2) NOT NULL DEFAULT '0.00',
+  `tax_withheld` DECIMAL(12,2) NOT NULL DEFAULT '0.00',
+  `net_payout` DECIMAL(12,2) NOT NULL DEFAULT '0.00',
+  `currency` VARCHAR(10) NOT NULL DEFAULT 'INR',
+  `status` ENUM('CALCULATED','PENDING_PAYOUT','PAID','HELD') NOT NULL DEFAULT 'CALCULATED',
+  `hold_reason` VARCHAR(255) NULL,
+  `payout_reference` VARCHAR(100) NULL,
+  `metadata` JSON NULL,
+  `paid_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_earnings_period` (`creator_id`, `period_month`),
+  KEY `idx_ce_creator` (`creator_id`),
+  KEY `idx_ce_status` (`status`),
+  KEY `idx_ce_period` (`period_month`),
+  CONSTRAINT `fk_earnings_creator` FOREIGN KEY (`creator_id`) REFERENCES `creators` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

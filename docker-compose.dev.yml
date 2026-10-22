@@ -1,0 +1,103 @@
+version: '3.8'
+
+# ==============================================================================
+# ShortReel Full-Stack Development Docker Compose (Hot-Reloading)
+# Usage: docker compose -f docker-compose.dev.yml up --build
+# ==============================================================================
+
+services:
+  shortreel-mysql:
+    image: mysql:8.0
+    container_name: shortreel-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: shortreel_dev
+      MYSQL_USER: shortreel_user
+      MYSQL_PASSWORD: shortreel_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shortreel-dev-network
+
+  shortreel-redis:
+    image: redis:7.0-alpine
+    container_name: shortreel-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shortreel-dev-network
+
+  shortreel-backend-dev:
+    image: node:20-alpine
+    container_name: shortreel-backend-dev
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      DATABASE_HOST: shortreel-mysql
+      DATABASE_PORT: 3306
+      DATABASE_USER: shortreel_user
+      DATABASE_PASSWORD: shortreel_password
+      DATABASE_NAME: shortreel_dev
+      REDIS_HOST: shortreel-redis
+      REDIS_PORT: 6379
+      JWT_SECRET: super-secret-shortreel-dev-key-minimum-32-chars-long
+      CORS_ORIGIN: "http://localhost:5173,http://localhost:3000,http://localhost"
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run start:dev"
+    depends_on:
+      shortreel-mysql:
+        condition: service_healthy
+      shortreel-redis:
+        condition: service_healthy
+    networks:
+      - shortreel-dev-network
+
+  shortreel-frontend-dev:
+    image: node:20-alpine
+    container_name: shortreel-frontend-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - shortreel-backend-dev
+    networks:
+      - shortreel-dev-network
+
+networks:
+  shortreel-dev-network:
+    driver: bridge
+
+volumes:
+  mysql_dev_data:
+  redis_dev_data:
+  backend_node_modules:
+  frontend_node_modules:
