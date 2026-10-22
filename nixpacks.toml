@@ -1,6 +1,12 @@
 # ==============================================================================
 # Nixpacks Configuration for Coolify
 # ==============================================================================
+[variables]
+NITRO_PRESET = "node-server"
+NITRO_HOST = "0.0.0.0"
+HOST = "0.0.0.0"
+NODE_ENV = "production"
+
 [phases.setup]
 nixPkgs = ["bun", "nodejs_20"]
 
@@ -11,4 +17,4 @@ cmds = ["bun install --frozen-lockfile"]
 cmds = ["bun run build"]
 
 [start]
-cmd = "bun run preview --host 0.0.0.0 --port ${PORT:-80}"
+cmd = "node .output/server/index.mjs"

@@ -50,8 +50,12 @@ if (fs.existsSync(srcDir)) {
 `;
 
     fs.writeFileSync(path.join(distDir, 'index.html'), indexHtmlContent, 'utf-8');
-    fs.writeFileSync(path.join(srcDir, 'index.html'), indexHtmlContent, 'utf-8');
-    console.log(`[PWA Build] Generated dist/index.html and .output/public/index.html successfully.`);
+    // Clean up .output/public/index.html if it exists so Nitro SSR always handles root route
+    const publicIndexHtml = path.join(srcDir, 'index.html');
+    if (fs.existsSync(publicIndexHtml)) {
+      fs.unlinkSync(publicIndexHtml);
+    }
+    console.log(`[PWA Build] Generated dist/index.html successfully.`);
   }
 } else {
   console.log(`[PWA Build] Source directory ${srcDir} not found, skipping sync.`);

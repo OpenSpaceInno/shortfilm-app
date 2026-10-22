@@ -1,7 +1,7 @@
 # ==============================================================================
 # ShortReel Frontend — Production Multi-Stage Dockerfile
-# Stage 1: Build & Bundle Vite / TanStack Router SPA
-# Stage 2: Serve static bundle via high-performance Nginx Alpine
+# Stage 1: Build & Bundle TanStack Start / Nitro SSR Server
+# Stage 2: Run production Node.js SSR Server
 # ==============================================================================
 
 FROM node:20-alpine AS builder
@@ -28,27 +28,29 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE
 ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN
 ENV VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID
 ENV VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
+ENV NITRO_PRESET=node-server
 
-# Build Vite SPA and run postbuild script
+# Build TanStack Start SSR output (.output)
 RUN npm run build
 
 # ------------------------------------------------------------------------------
-# Production Nginx Server Stage
+# Production Node.js Server Stage
 # ------------------------------------------------------------------------------
-FROM nginx:alpine AS runner
+FROM node:20-alpine AS runner
 
-# Remove default nginx assets
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /app
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV NODE_ENV=production
+ENV NITRO_HOST=0.0.0.0
+ENV HOST=0.0.0.0
+ENV PORT=80
 
-# Copy compiled production bundle from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy the standalone Nitro server output
+COPY --from=builder /app/.output ./.output
 
 EXPOSE 80
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://localhost/ || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -q --spider http://localhost:80/ || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", ".output/server/index.mjs"]
